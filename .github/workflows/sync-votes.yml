@@ -1,0 +1,43 @@
+name: Sync Votes
+
+on:
+  schedule:
+    # 30分毎、ただし */3 時台（sync-pages実行時間帯）は除外
+    # 1,2,4,5,7,8,10,11,13,14,16,17,19,20,22,23 時の 0分と30分
+    - cron: '0,30 1,2,4,5,7,8,10,11,13,14,16,17,19,20,22,23 * * *'
+  workflow_dispatch:
+  workflow_call:  # sync-pages からの呼び出し用
+
+jobs:
+  sync-votes:
+    name: Sync Votes
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panopticon/batch
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+        working-directory: ${{ github.workspace }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        run: uv sync
+
+      - name: 投票を同期
+        run: uv run scripts/sync_pages.py --only-votes --clear-cache --no-cache scp-jp
+        env:
+          PANOPTICON_API_URL: https://manage.scp-jp.com/
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
+          SYNC_MARGIN_DAYS: 1
+          WIKIDOT_LOG_LEVEL: WARNING

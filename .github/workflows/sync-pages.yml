@@ -1,0 +1,148 @@
+name: Sync Pages
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'  # 3時間毎
+  workflow_dispatch:
+    inputs:
+      site:
+        description: '対象サイト（空欄で全サイト）'
+        type: choice
+        options:
+          - ''
+          - scp-jp
+          - scp-jp-sandbox3
+          - scp-jp-storage
+          - scp-jp-sandbox2
+          - scp-sandbox
+          - 05command-jp
+        default: ''
+      full:
+        description: '全件同期'
+        type: boolean
+        default: false
+
+jobs:
+  sync-pages:
+    name: Sync Pages
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panopticon/batch
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+        working-directory: ${{ github.workspace }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        run: uv sync
+
+      - name: ページを同期
+        run: |
+          ARGS="--clear-cache --no-cache"
+          if [ "${{ inputs.full }}" = "true" ]; then
+            ARGS="$ARGS --full"
+          fi
+          if [ -n "${{ inputs.site }}" ]; then
+            ARGS="$ARGS ${{ inputs.site }}"
+          fi
+          uv run scripts/sync_pages.py $ARGS
+        env:
+          PANOPTICON_API_URL: https://manage.scp-jp.com/
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
+          SYNC_MARGIN_DAYS: 1
+          WIKIDOT_LOG_LEVEL: WARNING
+
+  # sync-pages 完了後に削除検出を実行
+  detect-deleted:
+    name: Detect Deleted Pages
+    needs: sync-pages
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panopticon/batch
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+        working-directory: ${{ github.workspace }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        run: uv sync
+
+      - name: 削除ページを検出
+        run: |
+          if [ -n "${{ inputs.site }}" ]; then
+            uv run scripts/detect_deleted.py ${{ inputs.site }}
+          else
+            uv run scripts/detect_deleted.py
+          fi
+        env:
+          PANOPTICON_API_URL: https://manage.scp-jp.com/
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
+
+  # detect-deleted 完了後に discussion_id を更新
+  update-discussion-id:
+    name: Update Discussion IDs
+    needs: detect-deleted
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panopticon/batch
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+        working-directory: ${{ github.workspace }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        run: uv sync
+
+      - name: discussion_idを更新
+        run: |
+          if [ -n "${{ inputs.site }}" ]; then
+            uv run scripts/sync_pages.py --only-discussion-id ${{ inputs.site }}
+          else
+            uv run scripts/sync_pages.py --only-discussion-id
+          fi
+        env:
+          PANOPTICON_API_URL: https://manage.scp-jp.com/
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
+
+  # update-discussion-id 完了後に sync-votes をチェーン実行
+  sync-votes:
+    name: Sync Votes (Chain)
+    needs: update-discussion-id
+    uses: ./.github/workflows/sync-votes.yml
+    secrets: inherit

@@ -1,0 +1,62 @@
+name: Sync Applications
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # 毎時0分
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode（実際の変更を行わない）'
+        type: boolean
+        default: false
+      skip_discord:
+        description: 'Discord通知をスキップ'
+        type: boolean
+        default: false
+
+jobs:
+  sync-applications:
+    name: Sync Applications
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panopticon/batch
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+        working-directory: ${{ github.workspace }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        run: uv sync
+
+      - name: 参加申請を同期
+        run: uv run scripts/sync_applications.py
+        env:
+          PANOPTICON_API_URL: ${{ secrets.PANOPTICON_API_URL }}
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
+
+      - name: 参加申請を自動承認
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          if [ "${{ inputs.skip_discord }}" = "true" ]; then
+            ARGS="$ARGS --no-discord"
+          fi
+          uv run scripts/auto_accept_applications.py $ARGS
+        env:
+          PANOPTICON_API_URL: ${{ secrets.PANOPTICON_API_URL }}
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

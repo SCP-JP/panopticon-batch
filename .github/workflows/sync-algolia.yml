@@ -1,0 +1,103 @@
+name: Sync Algolia
+
+on:
+  workflow_run:
+    workflows: ["Sync Pages", "Sync Forum"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      site:
+        description: '対象サイト（空欄で全サイト）'
+        type: choice
+        options:
+          - ''
+          - scp-jp
+          - scp-jp-sandbox3
+          - scp-jp-storage
+          - scp-jp-sandbox2
+          - scp-sandbox
+          - 05command-jp
+        default: ''
+      full:
+        description: '全件同期'
+        type: boolean
+        default: false
+      sync_pages:
+        description: 'ページ同期'
+        type: boolean
+        default: true
+      sync_forum:
+        description: 'フォーラム同期'
+        type: boolean
+        default: true
+
+jobs:
+  sync-algolia:
+    name: Sync Algolia
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+
+      # Bun + Wrangler セットアップ（D1クエリ用）
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Bun依存関係インストール
+        working-directory: panopticon/apps/web
+        run: bun install --frozen-lockfile
+
+      # Python環境セットアップ
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        working-directory: panopticon/batch
+        run: uv sync
+
+      - name: Algoliaに同期
+        working-directory: panopticon/batch
+        run: |
+          ARGS="--remote"
+          if [ "${{ inputs.full }}" = "true" ]; then
+            ARGS="$ARGS --full"
+          fi
+          if [ -n "${{ inputs.site }}" ]; then
+            ARGS="$ARGS --site ${{ inputs.site }}"
+          fi
+
+          # workflow_run の場合、発火元に応じて同期対象を限定
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.name }}" = "Sync Pages" ]; then
+              ARGS="$ARGS --no-forum"
+            elif [ "${{ github.event.workflow_run.name }}" = "Sync Forum" ]; then
+              ARGS="$ARGS --no-pages"
+            fi
+          else
+            # workflow_dispatch の場合は入力値を使用
+            if [ "${{ inputs.sync_pages }}" = "false" ]; then
+              ARGS="$ARGS --no-pages"
+            fi
+            if [ "${{ inputs.sync_forum }}" = "false" ]; then
+              ARGS="$ARGS --no-forum"
+            fi
+          fi
+
+          uv run scripts/sync_algolia.py $ARGS
+        env:
+          PANOPTICON_API_URL: https://manage.scp-jp.com/
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          ALGOLIA_APPLICATION_ID: 8P95FP8CEZ
+          ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SYNC_MARGIN_DAYS: 1

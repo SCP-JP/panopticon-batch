@@ -1,0 +1,63 @@
+name: Sync Members
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # 毎時0分
+  workflow_dispatch:
+    inputs:
+      site:
+        description: '対象サイト（空欄で全サイト）'
+        type: choice
+        options:
+          - ''
+          - scp-jp
+          - scp-jp-sandbox3
+          - scp-jp-storage
+          - scp-jp-sandbox2
+          - scp-sandbox
+          - 05command-jp
+        default: ''
+      no_detect_resigned:
+        description: '退会検出をスキップ'
+        type: boolean
+        default: false
+
+jobs:
+  sync-members:
+    name: Sync Members
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panopticon/batch
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+        working-directory: ${{ github.workspace }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        run: uv sync
+
+      - name: メンバーを同期
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.site }}" ]; then
+            ARGS="${{ inputs.site }}"
+          fi
+          if [ "${{ inputs.no_detect_resigned }}" = "true" ]; then
+            ARGS="$ARGS --no-detect-resigned"
+          fi
+          uv run scripts/sync_members.py $ARGS
+        env:
+          PANOPTICON_API_URL: ${{ secrets.PANOPTICON_API_URL }}
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
