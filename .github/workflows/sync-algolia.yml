@@ -39,7 +39,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Setup SSH key
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
 
@@ -56,7 +56,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       # Python環境セットアップ
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
 
