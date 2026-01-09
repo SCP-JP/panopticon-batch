@@ -13,7 +13,8 @@ Public リポジトリとして運用することで、GitHub Actions を無料�
 | ワークフロー | スケジュール | 説明 |
 |-------------|-------------|------|
 | Sync Members | 毎時 0 分 | サイトメンバーを同期、退会検出 |
-| Sync Pages | 3 時間毎 | ページデータを同期、削除検出、discussion_id 更新 |
+| Sync Pages | 3 時間毎 | ページデータを同期、discussion_id 更新 |
+| Detect Deleted | 毎日 03:00 JST | 削除ページを検出 |
 | Sync Votes | 30 分毎 | 投票データを同期（scp-jp のみ） |
 | Sync Forum | 3 時間毎 | フォーラムデータを同期 |
 | Sync Applications | 毎時 0 分 | 参加申請を同期、自動承認 |

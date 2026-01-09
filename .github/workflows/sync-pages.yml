@@ -64,48 +64,10 @@ jobs:
           SYNC_MARGIN_DAYS: 1
           WIKIDOT_LOG_LEVEL: WARNING
 
-  # sync-pages 完了後に削除検出を実行
-  detect-deleted:
-    name: Detect Deleted Pages
-    needs: sync-pages
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: panopticon/batch
-    steps:
-      - name: Setup SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
-
-      - name: Clone panopticon
-        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
-        working-directory: ${{ github.workspace }}
-
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: "latest"
-
-      - name: Python環境セットアップ
-        run: uv sync
-
-      - name: 削除ページを検出
-        run: |
-          if [ -n "${{ inputs.site }}" ]; then
-            uv run scripts/detect_deleted.py ${{ inputs.site }}
-          else
-            uv run scripts/detect_deleted.py
-          fi
-        env:
-          PANOPTICON_API_URL: https://manage.scp-jp.com/
-          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
-          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
-          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
-
-  # detect-deleted 完了後に discussion_id を更新
+  # sync-pages 完了後に discussion_id を更新
   update-discussion-id:
     name: Update Discussion IDs
-    needs: detect-deleted
+    needs: sync-pages
     runs-on: ubuntu-latest
     defaults:
       run:
