@@ -52,7 +52,7 @@ jobs:
           bun-version: latest
 
       - name: Bun依存関係インストール
-        working-directory: panopticon/apps/web
+        working-directory: panopticon/apps/manage
         run: bun install --frozen-lockfile
 
       # Python環境セットアップ
