@@ -2,7 +2,7 @@ name: Sync Pages
 
 on:
   schedule:
-    - cron: '0 */3 * * *'  # 3時間毎
+    - cron: '0 * * * *'  # 毎時
   workflow_dispatch:
     inputs:
       site:

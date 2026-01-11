@@ -2,7 +2,7 @@ name: Sync Applications
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 毎時0分
+    - cron: '*/15 * * * *'  # 15分毎
   workflow_dispatch:
     inputs:
       dry_run:
