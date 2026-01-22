@@ -2,7 +2,7 @@ name: Sync Forum
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 毎時
+    - cron: '0 */2 * * *'  # 2時間毎
   workflow_dispatch:
     inputs:
       site:

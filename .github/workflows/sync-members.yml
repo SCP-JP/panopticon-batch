@@ -2,7 +2,7 @@ name: Sync Members
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 毎時0分
+    - cron: '0 */6 * * *'  # 6時間毎
   workflow_dispatch:
     inputs:
       site:
