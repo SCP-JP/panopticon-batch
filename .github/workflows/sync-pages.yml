@@ -55,7 +55,7 @@ jobs:
           if [ -n "${{ inputs.site }}" ]; then
             ARGS="$ARGS ${{ inputs.site }}"
           fi
-          uv run scripts/sync_pages.py $ARGS
+          uv run scripts/sync_pages.py --concurrency 5 $ARGS
         env:
           PANOPTICON_API_URL: https://manage.scp-jp.com/
           PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}

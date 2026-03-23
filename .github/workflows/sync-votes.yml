@@ -32,7 +32,7 @@ jobs:
         run: uv sync
 
       - name: 投票を同期
-        run: uv run scripts/sync_pages.py --only-votes --clear-cache --no-cache scp-jp
+        run: uv run scripts/sync_pages.py --only-votes --clear-cache --no-cache --concurrency 5 scp-jp
         env:
           PANOPTICON_API_URL: https://manage.scp-jp.com/
           PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
