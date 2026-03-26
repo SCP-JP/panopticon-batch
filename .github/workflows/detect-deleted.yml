@@ -27,7 +27,7 @@ jobs:
         working-directory: panopticon/batch
     steps:
       - name: Setup SSH key
-        uses: webfactory/ssh-agent@v0.9.1
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
 
