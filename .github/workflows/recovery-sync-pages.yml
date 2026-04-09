@@ -1,0 +1,54 @@
+name: "Recovery: Sync Pages"
+
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: '対象サイト'
+        type: choice
+        options:
+          - scp-jp
+          - scp-jp-sandbox3
+        required: true
+      margin_days:
+        description: 'SYNC_MARGIN_DAYS（何日前まで遡るか）'
+        type: number
+        default: 30
+
+jobs:
+  recovery:
+    name: "Recovery ${{ inputs.site }} (margin=${{ inputs.margin_days }}d)"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panopticon/batch
+    steps:
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+        working-directory: ${{ github.workspace }}
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        run: uv sync
+
+      - name: "リカバリ同期: ${{ inputs.site }}"
+        run: |
+          uv run scripts/sync_pages.py \
+            --concurrency 5 \
+            --clear-cache --no-cache \
+            ${{ inputs.site }}
+        env:
+          PANOPTICON_API_URL: https://manage.scp-jp.com/
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
+          SYNC_MARGIN_DAYS: ${{ inputs.margin_days }}
+          WIKIDOT_LOG_LEVEL: INFO
