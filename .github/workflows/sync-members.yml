@@ -1,8 +1,8 @@
 name: Sync Members
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'  # 6時間毎
+  # schedule:
+  #   - cron: '0 */6 * * *'  # 6時間毎  # 一時停止中
   workflow_dispatch:
     inputs:
       site:

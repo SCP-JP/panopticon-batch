@@ -1,0 +1,71 @@
+name: Test Wikidot Params
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: "t=${{ matrix.timeout }}s a=${{ matrix.attempts }} c=${{ matrix.concurrency }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ベースライン（現在の設定）
+          - timeout: 20
+            attempts: 5
+            concurrency: 5
+          # タイムアウトのみ延長
+          - timeout: 60
+            attempts: 5
+            concurrency: 5
+          # リトライのみ増加
+          - timeout: 20
+            attempts: 10
+            concurrency: 5
+          # タイムアウト延長 + リトライ増加
+          - timeout: 60
+            attempts: 10
+            concurrency: 5
+          # 全部盛り（タイムアウト延長 + リトライ増加 + 並列度低下）
+          - timeout: 60
+            attempts: 10
+            concurrency: 2
+          # 極端なケース
+          - timeout: 90
+            attempts: 15
+            concurrency: 2
+    defaults:
+      run:
+        working-directory: panopticon/batch
+    steps:
+      - name: Checkout panopticon-batch
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.PANOPTICON_DEPLOY_KEY }}
+
+      - name: Clone panopticon
+        run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
+        working-directory: ${{ github.workspace }}
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Python環境セットアップ
+        run: uv sync
+
+      - name: "テスト: sandbox3 100ページ"
+        run: |
+          uv run ${{ github.workspace }}/scripts/test_wikidot_fetch.py \
+            scp-jp-sandbox3 \
+            --limit 100 \
+            --timeout ${{ matrix.timeout }} \
+            --attempt-limit ${{ matrix.attempts }} \
+            --concurrency ${{ matrix.concurrency }}
+        env:
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}

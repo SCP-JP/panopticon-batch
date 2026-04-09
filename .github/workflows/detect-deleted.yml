@@ -1,8 +1,8 @@
 name: Detect Deleted Pages
 
 on:
-  schedule:
-    - cron: '0 18 * * *'  # 毎日 18:00 UTC (03:00 JST)
+  # schedule:
+  #   - cron: '0 18 * * *'  # 毎日 18:00 UTC (03:00 JST)  # 一時停止中
   workflow_dispatch:
     inputs:
       site:
