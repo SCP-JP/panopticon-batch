@@ -11,30 +11,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ベースライン（現在の設定）
-          - timeout: 20
-            attempts: 5
-            concurrency: 5
-          # タイムアウトのみ延長
-          - timeout: 60
-            attempts: 5
-            concurrency: 5
-          # リトライのみ増加
+          # リトライのみ: 10回
           - timeout: 20
             attempts: 10
             concurrency: 5
-          # タイムアウト延長 + リトライ増加
-          - timeout: 60
-            attempts: 10
-            concurrency: 5
-          # 全部盛り（タイムアウト延長 + リトライ増加 + 並列度低下）
-          - timeout: 60
-            attempts: 10
-            concurrency: 2
-          # 極端なケース
-          - timeout: 90
+          # リトライのみ: 15回
+          - timeout: 20
             attempts: 15
-            concurrency: 2
+            concurrency: 5
+          # リトライのみ: 20回
+          - timeout: 20
+            attempts: 20
+            concurrency: 5
     defaults:
       run:
         working-directory: panopticon/batch
