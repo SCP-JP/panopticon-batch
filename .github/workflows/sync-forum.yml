@@ -63,3 +63,32 @@ jobs:
           WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
           SYNC_MARGIN_DAYS: 1
           WIKIDOT_LOG_LEVEL: WARNING
+
+      - name: 失敗スレッドをリトライ
+        run: |
+          # failed_idsが空でない進捗ファイルがあるか確認
+          HAS_FAILURES=false
+          for f in state/*/sync_forum_progress.json; do
+            [ -f "$f" ] || continue
+            if python3 -c "import json,sys; d=json.load(open('$f')); sys.exit(0 if d.get('failed_ids') else 1)" 2>/dev/null; then
+              HAS_FAILURES=true
+              echo "失敗あり: $f"
+            fi
+          done
+          if [ "$HAS_FAILURES" = "false" ]; then
+            echo "失敗スレッドなし、リトライ不要"
+            exit 0
+          fi
+          echo "30秒待機後にリトライ..."
+          sleep 30
+          ARGS="--retry-failed --no-cache"
+          if [ -n "${{ inputs.site }}" ]; then
+            ARGS="$ARGS ${{ inputs.site }}"
+          fi
+          uv run scripts/sync_forum.py $ARGS
+        env:
+          PANOPTICON_API_URL: https://manage.scp-jp.com/
+          PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
+          WIKIDOT_USERNAME: ${{ secrets.WIKIDOT_USERNAME }}
+          WIKIDOT_PASSWORD: ${{ secrets.WIKIDOT_PASSWORD }}
+          WIKIDOT_LOG_LEVEL: WARNING
