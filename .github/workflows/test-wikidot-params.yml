@@ -28,7 +28,7 @@ jobs:
         working-directory: panopticon/batch
     steps:
       - name: Checkout panopticon-batch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.10.0
