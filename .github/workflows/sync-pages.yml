@@ -1,8 +1,8 @@
 name: Sync Pages
 
 on:
-  # schedule:
-  #   - cron: '0 */2 * * *'  # 2時間毎
+  schedule:
+    - cron: '0 */2 * * *'  # 2時間毎
   workflow_dispatch:
     inputs:
       site:
@@ -55,7 +55,7 @@ jobs:
           if [ -n "${{ inputs.site }}" ]; then
             ARGS="$ARGS ${{ inputs.site }}"
           fi
-          uv run scripts/sync_pages.py --concurrency 5 $ARGS
+          uv run scripts/sync_pages.py --concurrency 5 --chunk-size 25 $ARGS
         env:
           PANOPTICON_API_URL: https://manage.scp-jp.com/
           PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}
@@ -85,7 +85,7 @@ jobs:
           if [ -n "${{ inputs.site }}" ]; then
             ARGS="$ARGS ${{ inputs.site }}"
           fi
-          uv run scripts/sync_pages.py $ARGS
+          uv run scripts/sync_pages.py --chunk-size 25 $ARGS
         env:
           PANOPTICON_API_URL: https://manage.scp-jp.com/
           PANOPTICON_API_KEY: ${{ secrets.PANOPTICON_API_KEY }}

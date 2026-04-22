@@ -1,8 +1,8 @@
 name: Sync Applications
 
 on:
-  # schedule:
-  #   - cron: '*/30 * * * *'  # 30分毎  # 一時停止中
+  schedule:
+    - cron: '*/30 * * * *'  # 30分毎
   workflow_dispatch:
     inputs:
       dry_run:

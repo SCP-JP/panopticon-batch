@@ -1,9 +1,9 @@
 name: Sync Votes
 
 on:
-  # schedule:
-  #   # 30分毎（偶数時0分はsync-pages経由でチェーン実行されるため除外）
-  #   - cron: '30 * * * *'  # 一時停止中
+  schedule:
+    # 30分毎（偶数時0分はsync-pages経由でチェーン実行されるため除外）
+    - cron: '30 * * * *'
   workflow_dispatch:
   workflow_call:  # sync-pages からの呼び出し用
 
