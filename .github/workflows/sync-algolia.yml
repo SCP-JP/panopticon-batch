@@ -38,6 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - name: Checkout panopticon-batch
+        uses: actions/checkout@v6
+
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.10.0
         with:
