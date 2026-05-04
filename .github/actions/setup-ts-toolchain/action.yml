@@ -1,0 +1,23 @@
+name: Setup TypeScript Toolchain
+description: Node.js 22 と Bun をセットアップする (wrangler 4.87.0+ が Node.js 22+ を要求するため)
+
+inputs:
+  node-version:
+    description: Node.js のバージョン
+    required: false
+    default: "22"
+  bun-version:
+    description: Bun のバージョン
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ inputs.bun-version }}
