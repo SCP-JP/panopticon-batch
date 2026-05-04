@@ -47,9 +47,7 @@ jobs:
         run: git clone --depth 1 git@github.com:scp-jp/panopticon.git panopticon
 
       # Bun + Wrangler セットアップ（D1クエリ用）
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - uses: ./.github/actions/setup-ts-toolchain
 
       - name: Bun依存関係インストール
         working-directory: panopticon/apps/manage
