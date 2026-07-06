@@ -1,0 +1,73 @@
+name: Monitor Workflow Health
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"  # 毎週月曜 00:00 UTC (09:00 JST)
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect repo activity and workflow states
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # GitHubは60日間新規commitが無いとscheduled workflowを全て自動無効化する
+          # 事前警告 (45日) と限界警告 (55日) を出し、また既に無効化済みのworkflowも検出する
+          last_commit_date=$(gh api "repos/$REPO/commits" -f per_page=1 --jq '.[0].commit.committer.date')
+          last_epoch=$(date -u -d "$last_commit_date" +%s)
+          now_epoch=$(date -u +%s)
+          days=$(( (now_epoch - last_epoch) / 86400 ))
+
+          disabled_json=$(gh api "repos/$REPO/actions/workflows" --paginate \
+            --jq '[.workflows[] | select(.state != "active") | {name, state, path}]' \
+            | jq -s 'add // []')
+          disabled_count=$(echo "$disabled_json" | jq 'length')
+
+          level=""
+          messages=()
+
+          if [ "$disabled_count" -gt 0 ]; then
+            level="CRITICAL"
+            list=$(echo "$disabled_json" | jq -r 'map("- \(.name) [\(.state)]") | join("\n")')
+            messages+=("**無効化されたworkflow (${disabled_count}件)**")
+            messages+=("${list}")
+            messages+=("")
+          fi
+
+          if [ "$days" -ge 55 ]; then
+            [ -z "$level" ] && level="CRITICAL"
+            messages+=("**最終commit から ${days} 日経過** (60日で全scheduled workflowが自動無効化されます)")
+          elif [ "$days" -ge 45 ]; then
+            [ -z "$level" ] && level="WARNING"
+            messages+=("**最終commit から ${days} 日経過** (60日で全scheduled workflowが自動無効化されます)")
+          fi
+
+          if [ -z "$level" ]; then
+            echo "healthy: ${days} days since last commit, ${disabled_count} disabled workflows"
+            exit 0
+          fi
+
+          case "$level" in
+            CRITICAL) color=15158332 ;;
+            WARNING)  color=15844367 ;;
+            *)        color=3447003 ;;
+          esac
+
+          body=$(printf '%s\n' "${messages[@]}")
+          payload=$(jq -nc \
+            --arg title "[${level}] ${REPO} Workflow Health" \
+            --arg desc "$body" \
+            --argjson color "$color" \
+            '{embeds: [{title: $title, description: $desc, color: $color}]}')
+
+          curl -fsS -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK_URL"
