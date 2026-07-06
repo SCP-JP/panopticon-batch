@@ -23,7 +23,8 @@ jobs:
 
           # GitHubは60日間新規commitが無いとscheduled workflowを全て自動無効化する
           # 事前警告 (45日) と限界警告 (55日) を出し、また既に無効化済みのworkflowも検出する
-          last_commit_date=$(gh api "repos/$REPO/commits" -f per_page=1 --jq '.[0].commit.committer.date')
+          # gh api で `-f/-F` を付けるとメソッドがPOSTになり404になるため、query stringで指定する
+          last_commit_date=$(gh api "repos/$REPO/commits?per_page=1" --jq '.[0].commit.committer.date')
           last_epoch=$(date -u -d "$last_commit_date" +%s)
           now_epoch=$(date -u +%s)
           days=$(( (now_epoch - last_epoch) / 86400 ))
