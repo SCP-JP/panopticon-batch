@@ -18,6 +18,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
+          # 意図して無効にした workflow のファイル名（空白区切り）。リポジトリの Variables で管理する
+          # 例: sync-forum.yml sync-pages.yml（panopticon の apps/sync へ切り替えたジョブ）
+          INTENTIONALLY_DISABLED: ${{ vars.INTENTIONALLY_DISABLED_WORKFLOWS }}
         run: |
           set -euo pipefail
 
@@ -31,7 +34,10 @@ jobs:
 
           disabled_json=$(gh api "repos/$REPO/actions/workflows" --paginate \
             --jq '[.workflows[] | select(.state != "active") | {name, state, path}]' \
-            | jq -s 'add // []')
+            | jq -s 'add // []' \
+            | jq --arg skip "${INTENTIONALLY_DISABLED:-}" \
+              '($skip | split(" ") | map(select(length > 0))) as $s
+               | map(select((.path | split("/") | last) as $f | ($s | index($f)) == null))')
           disabled_count=$(echo "$disabled_json" | jq 'length')
 
           level=""
