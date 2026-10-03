@@ -21,15 +21,22 @@ BASE_BRANCH=main
 
 ## ワークフロー一覧
 
-| ワークフロー | スケジュール | 説明 |
+定期起動は panopticon の apps/sync（Worker `panopticon-sync`）が `workflow_dispatch` で行う（各 workflow に `schedule:` は無い）。
+ジョブごとの起動先（`gha` / `workers` / `paused`）は panopticon の site DB の `sync_job_settings` で切り替える（panopticon の `apps/sync/CLAUDE.md`）。
+
+| ワークフロー | 起動（`gha` のとき、UTC） | 説明 |
 |-------------|-------------|------|
-| Sync Pages | 2時間毎 | ページ/リビジョン/ファイル同期 → discussion_id更新 → Sync Votesチェーン |
-| Sync Forum | 2時間毎 | フォーラムカテゴリ/スレッド/投稿同期 |
-| Sync Votes | 30分毎 | 投票データ同期（scp-jpのみ、--only-votesモード） |
-| Sync Members | 6時間毎 | サイトメンバー同期 |
-| Sync Applications | 30分毎 | 参加申請同期 |
-| Detect Deleted | 毎日 03:00 JST | 削除ページ検出 |
+| Sync Pages | 偶数時 :00 | ページ/リビジョン/ファイル同期 → discussion_id更新 → Sync Votesチェーン |
+| Sync Forum | 偶数時 :00 | フォーラムカテゴリ/スレッド/投稿同期 |
+| Sync Votes | 毎時 :30 | 投票データ同期（scp-jpのみ、--only-votesモード） |
+| Sync Members | 02/08/14/20時 :00 | サイトメンバー同期 |
+| Sync Applications | :00 / :30 | 参加申請同期 |
+| Detect Deleted | 18:00（03:00 JST） | 削除ページ検出 |
 | Sync Algolia | Sync Pages/Forum完了後 | 検索インデックス同期（workflow_runトリガー） |
+| Monitor Workflow Health | 月曜 00:00（`schedule:`） | 無効化された workflow と最終コミットからの日数を Discord に通知 |
+
+apps/sync へ切り替えたジョブの workflow は無効にし、リポジトリの Variables `INTENTIONALLY_DISABLED_WORKFLOWS`（ファイル名を空白区切り）に足す。
+足さないと Monitor Workflow Health が毎週 CRITICAL を出す。
 
 ## 仕組み
 
@@ -79,5 +86,5 @@ uv run scripts/sync_forum.py --concurrency 5 --no-cache --full --chunk-size 25 s
 ## 注意事項
 
 - スクリプト本体はpanopticonリポジトリで管理。このリポジトリはワークフロー定義とスケジュール設定のみ
-- cronを停止する場合は全ワークフローのscheduleをコメントアウトする（Sync Algoliaはworkflow_runなので自動停止）
+- 定期起動を止める場合は panopticon の `sync_job_settings` で該当ジョブを `paused` にする（Sync Algoliaはworkflow_runなので自動停止）
 - `test-wikidot-params.yml` はWikidot APIパラメータのテスト用ワークフロー（手動実行のみ）

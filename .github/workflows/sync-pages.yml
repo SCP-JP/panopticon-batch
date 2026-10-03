@@ -1,8 +1,8 @@
 name: Sync Pages
 
 on:
-  schedule:
-    - cron: '0 */2 * * *'  # 2時間毎
+  # 定期起動は panopticon の apps/sync（panopticon-sync）が workflow_dispatch で行う。
+  # 起動先は site DB の sync_job_settings で切り替える（panopticon の apps/sync/CLAUDE.md）
   workflow_dispatch:
     inputs:
       site:
@@ -14,8 +14,8 @@ on:
           - scp-jp-sandbox3
           - scp-jp-storage
           - scp-jp-sandbox2
-          - scp-sandbox
-          - 05command-jp
+          - scpsandbox-jp
+          - 05command-ja
         default: ''
       full:
         description: '全件同期'

@@ -1,9 +1,8 @@
 name: Sync Votes
 
 on:
-  schedule:
-    # 30分毎（偶数時0分はsync-pages経由でチェーン実行されるため除外）
-    - cron: '30 * * * *'
+  # 定期起動は panopticon の apps/sync（panopticon-sync）が workflow_dispatch で行う。
+  # 起動先は site DB の sync_job_settings で切り替える（panopticon の apps/sync/CLAUDE.md）
   workflow_dispatch:
   workflow_call:  # sync-pages からの呼び出し用
 

@@ -16,8 +16,8 @@ on:
           - scp-jp-sandbox3
           - scp-jp-storage
           - scp-jp-sandbox2
-          - scp-sandbox
-          - 05command-jp
+          - scpsandbox-jp
+          - 05command-ja
         default: ''
       full:
         description: '全件同期'
